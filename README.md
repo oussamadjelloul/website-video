@@ -186,7 +186,3 @@ The project includes Docker configuration for easy deployment:
 - `POST /videos/upload.php` - Upload a new video
 - `POST /videos/edit.php?id=:id` - Update video information
 - `POST /videos/delete.php?id=:id` - Delete a video
-
-## License
-
-This project is licensed under the MIT License - see the LICENSE file for details.
