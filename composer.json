@@ -1,0 +1,15 @@
+{
+    "name": "oussama/app",
+    "autoload": {
+        "psr-4": {
+            "Oussama\\App\\": "src/"
+        }
+    },
+    "authors": [
+        {
+            "name": "oussamadjelloul",
+            "email": "o.djelloul@esi-sba.dz"
+        }
+    ],
+    "require": {}
+}

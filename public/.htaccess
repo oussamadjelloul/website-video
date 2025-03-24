@@ -1,0 +1,15 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    RewriteBase /
+    
+    # Skip if file exists in assets folder
+    RewriteCond %{REQUEST_URI} !^/assets/
+    
+    # Don't rewrite if file exists, is a directory, or is a link
+    RewriteCond %{REQUEST_FILENAME} !-f
+    RewriteCond %{REQUEST_FILENAME} !-d
+    RewriteCond %{REQUEST_FILENAME} !-l
+    
+    # Route all other requests to index.php
+    RewriteRule ^(.*)$ index.php [L]
+</IfModule>

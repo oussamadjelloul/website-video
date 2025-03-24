@@ -1,0 +1,59 @@
+version: '3'
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: cdn_test_app
+    restart: unless-stopped
+    environment:
+      DB_HOST: db
+      DB_NAME: ${DB_NAME:-app}
+      DB_USER: ${DB_USER:-cdn}
+      DB_PASS: ${DB_PASS:-password}
+      AUTH_SECRET: ${AUTH_SECRET:-your-secure-random-string}
+    volumes:
+      - ./custom-php.ini:/usr/local/etc/php/conf.d/custom-php.ini
+      - ./:/var/www/html
+      - ./public/uploads:/var/www/html/public/uploads
+    ports:
+      - '8080:80'
+    depends_on:
+      - db
+    networks:
+      - cdn_network
+  db:
+    image: mysql:8.0
+    container_name: cdn_test_db
+    restart: unless-stopped
+    environment:
+      MYSQL_DATABASE: ${DB_NAME:-app}
+      MYSQL_USER: ${DB_USER:-cdn}
+      MYSQL_PASSWORD: ${DB_PASS:-password}
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASS:-rootpassword}
+    volumes:
+      - dbdata:/var/lib/mysql
+      - ./db:/docker-entrypoint-initdb.d
+    ports:
+      - '3306:3306'
+    networks:
+      - cdn_network
+  nginx:
+    image: nginx:latest
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - cdn_network
+    restart: unless-stopped
+networks:
+  cdn_network:
+    driver: bridge
+volumes:
+  dbdata:
+    driver: local
