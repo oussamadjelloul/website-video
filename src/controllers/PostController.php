@@ -30,6 +30,23 @@ class PostController
         $totalPosts = $this->postModel->getCount($userId);
         $totalPages = ceil($totalPosts / $limit);
 
+        // Create a MediaController instance to generate secure URLs
+        $mediaController = new MediaController();
+
+        // Generate signed URLs for each post's image
+        foreach ($posts as &$post) {
+            if (!empty($post['image_url'])) {
+                $imagePathParts = explode('/', ltrim($post['image_url'], '/'));
+                if (count($imagePathParts) >= 3 && $imagePathParts[0] === 'uploads') {
+                    $folder = $imagePathParts[1];
+                    $filename = end($imagePathParts);
+
+                    // Generate the secure URL - expires in 20 seconds
+                    $post['secure_image_url'] = $mediaController->getSecureUrl($folder, $filename, 20);
+                }
+            }
+        }
+
         // Pass data to view
         $data = [
             'posts' => $posts,
@@ -50,6 +67,30 @@ class PostController
             $_SESSION['errors'] = ['Post not found'];
             header('Location: /posts');
             exit;
+        }
+
+        // Create a MediaController instance to generate secure URLs
+        $mediaController = new MediaController();
+
+        // Generate a signed URL for the image with a 24-hour expiration
+        if (!empty($post['image_url'])) {
+            $imagePathParts = explode('/', ltrim($post['image_url'], '/'));
+            if (count($imagePathParts) >= 3 && $imagePathParts[0] === 'uploads') {
+                $folder = $imagePathParts[1];
+                $filename = end($imagePathParts);
+
+                // Add custom claims based on user role/permissions
+                $customClaims = [];
+
+                // Add user information if logged in
+                if ($this->auth->check()) {
+                    $user = $this->auth->user();
+                    $customClaims['userId'] = $user['id'];
+                }
+
+                // Generate the secure URL - expires in 24 hours (86400 seconds)
+                $post['secure_image_url'] = $mediaController->getSecureUrl($folder, $filename, 86400, $customClaims);
+            }
         }
 
         require_once __DIR__ . '/../views/posts/show.php';

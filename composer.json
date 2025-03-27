@@ -11,5 +11,7 @@
             "email": "o.djelloul@esi-sba.dz"
         }
     ],
-    "require": {}
+    "require": {
+        "firebase/php-jwt": "^6.10"
+    }
 }

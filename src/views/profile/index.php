@@ -24,7 +24,11 @@ require_once __DIR__ . '/../layouts/header.php';
                 <div class="card-body">
                     <h5 class="card-title">Profile Information</h5>
                     <div class="text-center mb-4">
-                        <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="Profile avatar" width="150" height="150">
+                        <?php if (!empty($user['secure_profile_image'])): ?>
+                            <img src="<?= htmlspecialchars($user['secure_profile_image']) ?>" class="rounded-circle mb-3" alt="Profile avatar" width="150" height="150">
+                        <?php else: ?>
+                            <img src="https://via.placeholder.com/150" class="rounded-circle mb-3" alt="Profile avatar" width="150" height="150">
+                        <?php endif; ?>
                     </div>
                     <ul class="list-group list-group-flush">
                         <li class="list-group-item d-flex justify-content-between">

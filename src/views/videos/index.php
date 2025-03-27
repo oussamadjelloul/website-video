@@ -68,8 +68,20 @@ ob_start();
                     <div class="card h-100">
                         <!-- Video Thumbnail -->
                         <a href="/videos/view/<?= $video['id'] ?>">
-                            <?php if ($video['thumbnail_url']): ?>
-                                <img src="<?= htmlspecialchars($video['thumbnail_url']) ?>"
+                            <?php if (isset($video['secure_thumbnail_url']) || $video['thumbnail_url']): ?>
+                                <?php
+                                 // Priority of URL sources: 
+                                 // 1. Secure signed URL (if available)
+                                 // 2. CDN URL (if available)
+                                 // 3. Regular video URL
+                                
+                                 
+                                 // Same for thumbnails
+                                 $posterSrc = isset($video['secure_thumbnail_url']) ? $video['secure_thumbnail_url'] : 
+                                             (isset($video['thumbnail_url']) ? $video['thumbnail_url'] : '');
+                                 
+                                ?>
+                                <img src="<?= htmlspecialchars($posterSrc) ?>"
                                     class="card-img-top" alt="<?= htmlspecialchars($video['title']) ?>"
                                     style="height: 180px; object-fit: cover;">
                             <?php else: ?>

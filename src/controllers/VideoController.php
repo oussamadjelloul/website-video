@@ -30,6 +30,49 @@ class VideoController
         $totalVideos = $this->videoModel->getCount($userId);
         $totalPages = ceil($totalVideos / $limit);
 
+        // Create a MediaController instance to generate secure URLs
+        $mediaController = new MediaController();
+
+        // Generate secure URLs for each video in the list
+        foreach ($videos as &$video) {
+            // Generate secure URL for video file
+            if (!empty($video['video_url'])) {
+                $videoPathParts = explode('/', ltrim($video['video_url'], '/'));
+                if (count($videoPathParts) >= 3 && $videoPathParts[0] === 'uploads') {
+                    $folder = $videoPathParts[1];
+                    $filename = end($videoPathParts);
+
+                    // Add custom claims based on user role/permissions or content restrictions
+                    $customClaims = [];
+
+                    // If this is premium content, add that as a claim
+                    if (isset($video['is_premium']) && $video['is_premium']) {
+                        $customClaims['contentType'] = 'premium';
+                    }
+
+                    // Add user information if logged in
+                    if ($this->auth->check()) {
+                        $user = $this->auth->user();
+                        $customClaims['userId'] = $user['id'];
+                    }
+
+                    // Generate the secure URL - expires in 20 seconds
+                    $video['secure_video_url'] = $mediaController->getSecureUrl($folder, $filename, 20, $customClaims);
+                }
+            }
+
+            // Generate secure URL for thumbnail
+            if (!empty($video['thumbnail_url'])) {
+                $thumbnailPathParts = explode('/', ltrim($video['thumbnail_url'], '/'));
+                if (count($thumbnailPathParts) >= 3 && $thumbnailPathParts[0] === 'uploads') {
+                    $thumbFolder = $thumbnailPathParts[1];
+                    $thumbFilename = end($thumbnailPathParts);
+                    // Thumbnails can have longer expiration - 24 hours
+                    $video['secure_thumbnail_url'] = $mediaController->getSecureUrl($thumbFolder, $thumbFilename, 86400);
+                }
+            }
+        }
+
         // Pass data to view
         $data = [
             'videos' => $videos,
@@ -50,6 +93,43 @@ class VideoController
             $_SESSION['errors'] = ['Video not found'];
             header('Location: /videos');
             exit;
+        }
+
+        // Create a MediaController instance to generate secure URLs
+        $mediaController = new MediaController();
+
+        // Generate a signed URL for the video with a 2-hour expiration
+        $videoPathParts = explode('/', ltrim($video['video_url'], '/'));
+        if (count($videoPathParts) >= 3 && $videoPathParts[0] === 'uploads') {
+            $folder = $videoPathParts[1];
+            $filename = end($videoPathParts);
+
+            // Add custom claims based on user role/permissions or content restrictions
+            $customClaims = [];
+
+            // If this is premium content, add that as a claim
+            if (isset($video['is_premium']) && $video['is_premium']) {
+                $customClaims['contentType'] = 'premium';
+            }
+
+            // Add user information if logged in
+            if ($this->auth->check()) {
+                $user = $this->auth->user();
+                $customClaims['userId'] = $user['id'];
+            }
+
+            // Generate the secure URL - expires in 20 seconds
+            $video['secure_video_url'] = $mediaController->getSecureUrl($folder, $filename, 20, $customClaims);
+
+            // Generate a secure URL for the thumbnail as well - expires in 24 hours
+            if (!empty($video['thumbnail_url'])) {
+                $thumbnailPathParts = explode('/', ltrim($video['thumbnail_url'], '/'));
+                if (count($thumbnailPathParts) >= 3 && $thumbnailPathParts[0] === 'uploads') {
+                    $thumbFolder = $thumbnailPathParts[1];
+                    $thumbFilename = end($thumbnailPathParts);
+                    $video['secure_thumbnail_url'] = $mediaController->getSecureUrl($thumbFolder, $thumbFilename, 86400);
+                }
+            }
         }
 
         require_once __DIR__ . '/../views/videos/show.php';
@@ -257,7 +337,7 @@ class VideoController
             exit;
         }
 
-        require_once __DIR__ . '/../views/videos/edit';
+        require_once __DIR__ . '/../views/videos/edit.php';
     }
 
     // Process video update

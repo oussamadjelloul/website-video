@@ -32,7 +32,7 @@ ob_start();
                 <div class="mb-3">
                     <label class="form-label">Current Image</label>
                     <div>
-                        <img src="<?= htmlspecialchars($post['cdn_url'] ?: $post['image_url']) ?>"
+                        <img src="<?= htmlspecialchars($post['secure_image_url'] ?? $post['cdn_url'] ?? $post['image_url']) ?>"
                             class="img-thumbnail mb-2" style="max-height: 200px;" alt="Current image">
                     </div>
                 </div>

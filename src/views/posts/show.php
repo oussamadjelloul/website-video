@@ -23,7 +23,7 @@ ob_start();
 
     <?php if ($post['image_url'] || $post['cdn_url']): ?>
         <div class="mb-4 text-center">
-            <img src="<?= htmlspecialchars($post['image_url']) ?>"
+            <img src="<?= htmlspecialchars($post['secure_image_url'] ?? $post['cdn_url'] ?? $post['image_url']) ?>"
                 class="img-fluid rounded" style="max-height: 400px;"
                 alt="<?= htmlspecialchars($post['title']) ?>">
         </div>
@@ -35,7 +35,7 @@ ob_start();
 
     <?php if (isset($_SESSION['user_id']) && $_SESSION['user_id'] === $post['user_id']): ?>
         <div class="mt-4">
-            <a href="/posts/edit?id=<?= $post['id'] ?>" class="btn btn-primary me-2">Edit Post</a>
+            <a href="/posts/edit/<?= $post['id'] ?>" class="btn btn-primary me-2">Edit Post</a>
             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#deletePostModal">
                 Delete Post
             </button>

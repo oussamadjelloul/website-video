@@ -19,17 +19,22 @@
         <div class="card-body p-0">
             <!-- Video Player -->
             <div class="ratio ratio-16x9">
-                <?php if ($video['cdn_url']): ?>
-                    <video id="videoPlayer" controls poster="<?= htmlspecialchars($video['thumbnail_url'] ?? '') ?>">
-                        <source src="<?= htmlspecialchars($video['cdn_url']) ?>" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                <?php else: ?>
-                    <video id="videoPlayer" controls poster="<?= htmlspecialchars($video['thumbnail_url'] ?? '') ?>">
-                        <source src="<?= htmlspecialchars($video['video_url']) ?>" type="video/mp4">
-                        Your browser does not support the video tag.
-                    </video>
-                <?php endif; ?>
+                <?php 
+                // Priority of URL sources: 
+                // 1. Secure signed URL (if available)
+                // 2. CDN URL (if available)
+                // 3. Regular video URL
+                $videoSrc = isset($video['secure_video_url']) ? $video['secure_video_url'] : 
+                           (isset($video['cdn_url']) && $video['cdn_url'] ? $video['cdn_url'] : $video['video_url']);
+                
+                // Same for thumbnails
+                $posterSrc = isset($video['secure_thumbnail_url']) ? $video['secure_thumbnail_url'] : 
+                            (isset($video['thumbnail_url']) ? $video['thumbnail_url'] : '');
+                ?>
+                <video id="videoPlayer" controls poster="<?= htmlspecialchars($posterSrc) ?>">
+                    <source src="<?= htmlspecialchars($videoSrc) ?>" type="video/mp4">
+                    Your browser does not support the video tag.
+                </video>
             </div>
         </div>
     </div>
@@ -73,14 +78,20 @@
                 </div>
             </div>
 
-            <?php if (isset($video['cdn_url']) && $video['cdn_url']): ?>
+            <?php if (isset($video['secure_video_url']) || (isset($video['cdn_url']) && $video['cdn_url'])): ?>
                 <div class="alert alert-info">
                     <h5 class="alert-heading">CDN Information</h5>
-                    <p>This video is being served from a CDN.</p>
+                    <p>This video is being served from a CDN with secure signed URLs.</p>
                     <hr>
                     <div class="mb-0">
                         <strong>Local URL:</strong> <code><?= htmlspecialchars($video['video_url']) ?></code><br>
-                        <strong>CDN URL:</strong> <code><?= htmlspecialchars($video['cdn_url']) ?></code>
+                        <?php if (isset($video['cdn_url']) && $video['cdn_url']): ?>
+                            <strong>CDN URL:</strong> <code><?= htmlspecialchars($video['cdn_url']) ?></code><br>
+                        <?php endif; ?>
+                        <?php if (isset($video['secure_video_url'])): ?>
+                            <strong>Secure URL:</strong> <code><?= htmlspecialchars(substr($video['secure_video_url'], 0, 60)) ?>...</code>
+                            <p class="mt-2 mb-0 text-muted small">Note: Secure URLs expire after 2 hours for videos and 24 hours for thumbnails.</p>
+                        <?php endif; ?>
                     </div>
                 </div>
             <?php endif; ?>
@@ -108,5 +119,41 @@
         <a href="/videos" class="btn btn-secondary">&larr; Back to Videos</a>
     </div>
 </div>
+
+<script>
+// Add a listener to reload the video when the secure URL expires
+document.getElementById('videoPlayer').addEventListener('error', function(e) {
+    console.log('Video playback error detected, possibly due to expired token');
+    
+    // Only reload if we're using a secure URL (which contains a token)
+    const videoSrc = this.querySelector('source').src;
+    if (videoSrc.includes('token=')) {
+        console.log('Reloading page to refresh token');
+        
+        // Remember the current playback position
+        const currentTime = this.currentTime;
+        
+        // Store the position in sessionStorage
+        sessionStorage.setItem('videoPlaybackPosition', currentTime);
+        
+        // Reload the page to get a fresh token
+        window.location.reload();
+    }
+});
+
+// Restore playback position if available
+document.addEventListener('DOMContentLoaded', function() {
+    const player = document.getElementById('videoPlayer');
+    const savedPosition = sessionStorage.getItem('videoPlaybackPosition');
+    
+    if (savedPosition !== null) {
+        // Set the playback position
+        player.currentTime = parseFloat(savedPosition);
+        
+        // Clear the stored position
+        sessionStorage.removeItem('videoPlaybackPosition');
+    }
+});
+</script>
 
 <?php require_once __DIR__ . '/../layouts/footer.php'; ?>

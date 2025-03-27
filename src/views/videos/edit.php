@@ -4,7 +4,7 @@
     <nav aria-label="breadcrumb">
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="/videos">Videos</a></li>
-            <li class="breadcrumb-item"><a href="/videos/view.php?id=<?= $video['id'] ?>"><?= htmlspecialchars($video['title']) ?></a></li>
+            <li class="breadcrumb-item"><a href="/videos/view/<?= $video['id'] ?>"><?= htmlspecialchars($video['title']) ?></a></li>
             <li class="breadcrumb-item active" aria-current="page">Edit</li>
         </ol>
     </nav>
@@ -25,7 +25,7 @@
                 <?php unset($_SESSION['errors']); ?>
             <?php endif; ?>
 
-            <form action="/videos/update" method="POST" enctype="multipart/form-data">
+            <form action="/videos/edit/<?= $video['id'] ?>" method="POST" enctype="multipart/form-data">
                 <input type="hidden" name="id" value="<?= $video['id'] ?>">
 
                 <div class="mb-3">
@@ -81,7 +81,7 @@
                 </div>
 
                 <div class="d-flex justify-content-between">
-                    <a href="/videos/view?id=<?= $video['id'] ?>" class="btn btn-secondary">Cancel</a>
+                    <a href="/videos/view/<?= $video['id'] ?>" class="btn btn-secondary">Cancel</a>
                     <button type="submit" class="btn btn-primary">Update Video</button>
                 </div>
             </form>

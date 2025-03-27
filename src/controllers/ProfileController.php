@@ -25,6 +25,19 @@ class ProfileController
 
         // Get user data
         $user = $this->auth->user();
+        
+        // Generate secure URL for profile image if it exists
+        if (!empty($user['profile_image'])) {
+            $mediaController = new MediaController();
+            $imagePathParts = explode('/', ltrim($user['profile_image'], '/'));
+            if (count($imagePathParts) >= 3 && $imagePathParts[0] === 'uploads') {
+                $folder = $imagePathParts[1];
+                $filename = end($imagePathParts);
+                
+                // Generate the secure URL - expires in 24 hours (86400 seconds)
+                $user['secure_profile_image'] = $mediaController->getSecureUrl($folder, $filename, 86400);
+            }
+        }
 
         // Get user's posts and videos (if needed)
         // $posts = (new Post())->getByUserId($user['id'], 5);

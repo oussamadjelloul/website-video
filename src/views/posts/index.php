@@ -24,7 +24,7 @@ ob_start();
             <div class="col-md-6 col-lg-4 mb-4">
                 <div class="card h-100">
                     <?php if ($post['image_url'] || $post['cdn_url']): ?>
-                        <img src="<?= htmlspecialchars($post['image_url']) ?>"
+                        <img src="<?= htmlspecialchars($post['secure_image_url'] ?? $post['cdn_url'] ?? $post['image_url']) ?>"
                             class="card-img-top" alt="<?= htmlspecialchars($post['title']) ?>"
                             style="height: 200px; object-fit: cover;">
                     <?php endif; ?>
