@@ -9,7 +9,6 @@ This project is designed to test CDN integration by creating a simple website th
 ## Features
 
 - **User Authentication**
-
   - Registration with email verification
   - Login/logout functionality
   - Password reset
@@ -19,12 +18,17 @@ This project is designed to test CDN integration by creating a simple website th
   - Video uploads and streaming
   - Content listing and filtering
 
+- **URL Signing**
+  - JWT-based URL signing for secure content access
+  - Temporary access tokens for media resources
+
 ## Tech Stack
 
 - **Frontend**: PHP, HTML, CSS, JavaScript
 - **Backend**: PHP
 - **Database**: MySQL
 - **Authentication**: Custom PHP authentication system
+- **URL Signing**: JWT (JSON Web Tokens)
 - **Form Handling**: PHP form validation
 - **File Storage**: Local (dev)
 
@@ -39,7 +43,8 @@ This project is designed to test CDN integration by creating a simple website th
 │   ├── controllers/    # Controller classes
 │   │   ├── AuthController.php    # Authentication controllers
 │   │   ├── PostController.php    # Post management
-│   │   └── VideoController.php   # Video management
+│   │   ├── VideoController.php   # Video management
+|   |   └── mediaController.php   # for controll access of vides and images and check tokens
 │   ├── models/         # Database models
 │   │   ├── User.php    # User model
 │   │   ├── Post.php    # Post model
@@ -115,10 +120,14 @@ CREATE TABLE videos (
 
 1. Clone the repository.
 
-2. Install dependencies:
+2. Install or update dependencies:
 
    ```bash
+   # First time setup
    composer install
+
+   # To update dependencies
+   composer update
    ```
 
 3. Create a `.env` file with the following variables:
@@ -132,6 +141,9 @@ CREATE TABLE videos (
 
    # Auth
    AUTH_SECRET=your-secret-key
+
+   # URL Signing
+   JWT_SECRET=your-jwt-secret-key
    ```
 
 4. Initialize the database:
@@ -139,10 +151,31 @@ CREATE TABLE videos (
    ```bash
    php db/migrate.php
    ```
+5. install dependencies:
+  ```bash
+    composer udpate
+  ```
+6. Configure your web server to point to the `public` directory.
 
-5. Configure your web server to point to the `public` directory.
+7. Access the application at `http://localhost` or your configured domain.
 
-6. Access the application at `http://localhost` or your configured domain.
+## URL Signing with JWT
+
+The project implements URL signing using JSON Web Tokens (JWT) to provide temporary, secure access to media resources:
+
+- Generates time-limited tokens for accessing media files
+- Prevents unauthorized direct access to uploaded content
+- Supports granular access control based on user permissions
+
+### How URL Signing Works
+
+1. When a user requests a media resource, a temporary signed URL is generated
+2. The signed URL contains:
+   - Resource identifier
+   - Expiration timestamp
+   - User permissions
+3. Backend validates the token before serving the content
+4. Expired or tampered tokens are automatically rejected
 
 ## Deployment
 
