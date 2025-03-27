@@ -2,6 +2,9 @@
 // Start session
 session_start();
 
+// Load Composer autoloader
+require_once __DIR__ . '/../vendor/autoload.php';
+
 // Load configuration
 require_once __DIR__ . '/../src/config/config.php';
 
@@ -19,6 +22,7 @@ class CacheManager {
      * Set appropriate cache headers based on content type
      */
     public static function setCacheHeaders($cacheType = self::CACHE_NONE) {
+        error_log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> setCacheHeaders");
         // Remove any existing cache headers to prevent conflicts
         header_remove('Pragma');
         header_remove('Cache-Control');
@@ -64,6 +68,8 @@ class CacheManager {
      * Determine cache type based on route or path
      */
     public static function determineCacheType($route = null) {
+        
+        error_log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> determineCacheType");
         // Auth routes should never be cached
         if (strpos($_SERVER['REQUEST_URI'], '/auth/') === 0) {
             return self::CACHE_NONE;
@@ -112,6 +118,8 @@ class Router {
 
     // Register a GET route with cache type
     public function get($path, $callback, $cacheType = null) {
+        //display pathe of router 
+        error_log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> get: $path");
         $this->routes['GET'][$path] = [
             'callback' => $callback,
             'cacheType' => $cacheType
@@ -128,6 +136,8 @@ class Router {
 
     // Resolve the current route
     public function resolve() {
+        // display path of resolve : 
+        error_log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> resolve: " . $_SERVER['REQUEST_URI']);
         $method = $_SERVER['REQUEST_METHOD'];
         $uri = parse_url($_SERVER['REQUEST_URI'], PHP_URL_PATH);
         
@@ -285,7 +295,7 @@ $router->get('/videos/delete/:id', 'VideoController@delete', CacheManager::CACHE
 // $router->get('/uploads/videos/:file', 'MediaController@serve', CacheManager::CACHE_STATIC);
 
 // URL: /uploads/images/filename.jpg
-$router->get('/uploads/:folder/:filename', 'MediaController@serve', CacheManager::CACHE_STATIC);
+$router->get('/uploads/:folder/:filename', 'MediaController@serve', CacheManager::CACHE_NONE);
 
 // Try to resolve the current route
 $routeWasResolved = $router->resolve();
