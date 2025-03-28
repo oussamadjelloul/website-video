@@ -3,7 +3,7 @@ require_once __DIR__ . '/../lib/CDN.php';
 
 /**
  * MediaController
- * 
+ *
  * Handles serving media files from the uploads directory
  * with appropriate cache headers
  */
@@ -64,7 +64,7 @@ class MediaController
 
     /**
      * Serve a file from the uploads directory
-     * 
+     *
      * @param string $folder The folder within uploads (images, videos, thumbnails)
      * @param string $filename The filename to serve
      * @param string $token JWT token for validation (optional)
@@ -72,10 +72,18 @@ class MediaController
     public function serve($folder, $filename)
     {
         $token = isset($_GET['token']) ? $_GET['token'] : null;
+        $t = isset($_GET['t']) ? $_GET['t'] : null;
         $filename = urldecode($filename);
+        $filePath = $this->uploadsBaseDir . '/' . $folder . '/' . $filename;
+        error_log("MediaController->serve called: folder=$folder, file=$filename");
+        error_log("MediaController path debug: __DIR__ = " . __DIR__);
+        error_log("MediaController path debug: uploadsBaseDir = " . $this->uploadsBaseDir);
+        error_log("MediaController path debug: full file path = " . $filePath);
+        error_log("MediaController path debug: file exists check = " . (file_exists($filePath) ? 'true' : 'false'));
         error_log("generateSignedUrl->serve called: folder=$folder, file=$filename");
         // Validate folder - only allow specific folders
         error_log(">>>>>>>>>>>>>>>>>>>>>>>>> 88888888888888 >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>");
+        error_log(">>>>>>>>>>>>>>>>>>>>>> token:$token");
         if (!in_array($folder, ['images', 'thumbnails', 'videos'])) {
             $this->send404('Invalid folder');
             return;
@@ -84,6 +92,7 @@ class MediaController
         // Validate filename to prevent directory traversal
         if (strpos($filename, '../') !== false || strpos($filename, '..\\') !== false) {
             $this->send404('Invalid filename');
+            error_log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 404 ");
             return;
         }
 
@@ -93,6 +102,7 @@ class MediaController
         // Check if file exists
         if (!file_exists($filePath)) {
             $this->send404('File not found');
+            error_log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 404 ");
             return;
         }
 
@@ -104,25 +114,37 @@ class MediaController
             if (!$tokenData) {
                 header('HTTP/1.1 403 Forbidden');
                 echo "Invalid or expired token";
+                error_log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 404 : $tokenData ");
                 exit;
             }
 
             // Check if token is for the correct resource
-            $expectedPath = "/uploads/{$folder}/{$filename}";
+            $expectedPath = "/uploads/{$folder}/{$filename}?t={$t}";
             if (isset($tokenData['sub']) && $tokenData['sub'] !== $expectedPath) {
                 header('HTTP/1.1 403 Forbidden');
+                error_log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 404 incorrect resource ");
                 echo "Token not valid for this resource";
                 exit;
             }
 
             // Check if token has expired
-            if (isset($tokenData['exp']) && $tokenData['exp'] < time()) {
+            //if (isset($tokenData['exp']) && $tokenData['exp'] < time()) {
+            //    error_log(">>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> 404 time expired ");
+            //  header('HTTP/1.1 403 Forbidden');
+            //    echo "Token has expired";
+            //    exit;
+           // }
+           $currentTime = date('Y-m-d H:i:s T'); // Formatted date with timezone
+           error_log("Current time: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" . $currentTime);
+           // Correct token expiration check
+           if (isset($tokenData['exp']) && time() > $tokenData['exp']) {
                 header('HTTP/1.1 403 Forbidden');
+                error_log("Token expired: current time " . time() . " > token expiration " . $tokenData['exp']);
                 echo "Token has expired";
                 exit;
-            }
+           }
         }else {
-            error_log("Token not provided or CDN not configured, serving file directly.");
+            error_log(" >>>>>>>>>>>>>>>>>>>>>>>>>>  Token not provided, not serving file directly.");
             $this->send404('Unsupported file type');
             return;
         }
@@ -173,7 +195,7 @@ class MediaController
 
         // Set content length
         header('Content-Length: ' . filesize($filePath));
-
+        error_log("$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$$ get images ");
         // For videos, support range requests (for seeking)
         if (strpos($this->contentTypes[$extension], 'video/') === 0) {
             $this->handleRangeRequest($filePath);
@@ -187,7 +209,7 @@ class MediaController
 
     /**
      * Generate a secure CDN URL for the given media
-     * 
+     *
      * @param string $folder The folder (images, videos, thumbnails)
      * @param string $filename The filename
      * @param int $expirationTime Time in seconds until the URL expires (default 20 seconds)
@@ -251,7 +273,7 @@ class MediaController
 
     /**
      * Stream a protected video file with token verification
-     * 
+     *
      * @param string $folder The folder (videos)
      * @param string $filename The video filename
      * @param string $token JWT token for validation
@@ -340,7 +362,7 @@ class MediaController
 
     /**
      * Handle HTTP Range requests for video seeking
-     * 
+     *
      * @param string $filePath Path to the video file
      */
     private function handleRangeRequest($filePath)
@@ -380,7 +402,7 @@ class MediaController
 
     /**
      * Send a 404 response
-     * 
+     *
      * @param string $message Error message
      */
     private function send404($message = 'File not found')
@@ -410,7 +432,7 @@ class MediaController
     /**
      * Stream a video file (alternative method for streaming)
      * Could be used for more advanced video streaming needs
-     * 
+     *
      * @param string $folder The folder (videos)
      * @param string $filename The video filename
      */
