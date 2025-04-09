@@ -295,7 +295,7 @@ $router->get('/videos/delete/:id', 'VideoController@delete', CacheManager::CACHE
 // $router->get('/uploads/videos/:file', 'MediaController@serve', CacheManager::CACHE_STATIC);
 
 // URL: /uploads/images/filename.jpg
-$router->get('/uploads/:folder/:filename', 'MediaController@serve', CacheManager::CACHE_NONE);
+$router->get('/uploads/:folder/:filename', 'MediaController@serve', CacheManager::CACHE_PUBLIC);
 
 // Try to resolve the current route
 $routeWasResolved = $router->resolve();
