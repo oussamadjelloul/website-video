@@ -3,8 +3,13 @@
 // Install using: composer require firebase/php-jwt
 
 // Explicitly import the Firebase JWT classes
-use Firebase\JWT\JWT;
-use Firebase\JWT\Key;
+// use Firebase\JWT\JWT;
+// use Firebase\JWT\Key;
+use Jose\Component\Core\JWK;
+use Jose\Component\Signature\JWSBuilder;
+use Jose\Component\Signature\Algorithm\HS256;
+use Jose\Component\Signature\Serializer\CompactSerializer;
+use Jose\Component\Signature\JWSVerifier;
 
 class CDN
 {
@@ -14,33 +19,33 @@ class CDN
     private $region;
     private $bucket;
     private $signKeys = [];
-    private $currentKeyId = 'key0';
+    private $currentKeyId = '0';
 
     public function __construct()
     {
         // Check if CDN credentials are configured
         // if (isset($_ENV['CDN_PROVIDER']) && isset($_ENV['CDN_API_KEY'])) {
-            $this->configured = true;
-            $this->provider = $_ENV['CDN_PROVIDER'];
-            $this->apiKey = $_ENV['CDN_API_KEY'];
-            $this->region = $_ENV['CDN_REGION'] ?? '';
-            $this->bucket = $_ENV['CDN_BUCKET'] ?? '';
-            
-            // Load signing keys for URL signing if configured
-            if (isset($_ENV['CDN_SIGN_KEY0'])) {
-                $this->signKeys['key0'] = $_ENV['CDN_SIGN_KEY0'];
-            }
-            if (isset($_ENV['CDN_SIGN_KEY1'])) {
-                $this->signKeys['key1'] = $_ENV['CDN_SIGN_KEY1'];
-            }
-            if (isset($_ENV['CDN_SIGN_KEY2'])) {
-                $this->signKeys['key2'] = $_ENV['CDN_SIGN_KEY2'];
-            }
-            
-            // Set current key ID if specified
-            if (isset($_ENV['CDN_CURRENT_KEY_ID'])) {
-                $this->currentKeyId = $_ENV['CDN_CURRENT_KEY_ID'];
-            }
+        $this->configured = true;
+        $this->provider = $_ENV['CDN_PROVIDER'];
+        $this->apiKey = $_ENV['CDN_API_KEY'];
+        $this->region = $_ENV['CDN_REGION'] ?? '';
+        $this->bucket = $_ENV['CDN_BUCKET'] ?? '';
+
+        // Load signing keys for URL signing if configured
+        if (isset($_ENV['CDN_SIGN_KEY0'])) {
+            $this->signKeys['0'] = $_ENV['CDN_SIGN_KEY0'];
+        }
+        if (isset($_ENV['CDN_SIGN_KEY1'])) {
+            $this->signKeys['1'] = $_ENV['CDN_SIGN_KEY1'];
+        }
+        if (isset($_ENV['CDN_SIGN_KEY2'])) {
+            $this->signKeys['2'] = $_ENV['CDN_SIGN_KEY2'];
+        }
+
+        // Set current key ID if specified
+        if (isset($_ENV['CDN_CURRENT_KEY_ID'])) {
+            $this->currentKeyId = $_ENV['CDN_CURRENT_KEY_ID'];
+        }
         // }
     }
 
@@ -138,7 +143,7 @@ class CDN
         $fileName = basename($localPath);
         return "https://cdn-example.com/" . $this->bucket . "/" . $fileName;
     }
-    
+
     /**
      * Generate a signed URL for Apache Traffic Control CDN
      * 
@@ -149,60 +154,66 @@ class CDN
      * @return string|null The signed URL or null if signing is not configured
      * @throws Exception If the signing key is not available
      */
+
     public function generateSignedUrl($urlPath, $expirationTime, $customClaims = [], $keyId = null)
     {
-        error_log("Generating signed URL for path: $urlPath with expiration: $expirationTime seconds");
-        // If no keys are configured, return null
-        if (empty($this->signKeys)) {
-            return null;
-        }
-        
         // Use specified key ID or default to current key
         $useKeyId = $keyId ?? $this->currentKeyId;
-        
-        // Check if the key exists
-        if (!isset($this->signKeys[$useKeyId])) {
-            throw new Exception("Signing key '$useKeyId' not found");
-        }
-        
-        // Get the signing key
-        $signingKey = $this->signKeys[$useKeyId];
-        
-        // Calculate the expiration timestamp
-        $expirationTimestamp = time() + $expirationTime;
-        
-        // Prepare standard claims
+
+        // Create a structured JWK (JSON Web Key)
+        // Create a structured JWK (JSON Web Key)
+        $jwk = new JWK([
+            'kty' => 'oct',
+            'k' => $this->base64UrlEncode($this->signKeys[$useKeyId]), // Modified this line
+            'alg' => 'HS256',
+            'kid' => $useKeyId
+        ]);
+
+        // Prepare claims
         $claims = [
-            'iss' => $_SERVER['HTTP_HOST'] ?? 'cdn.example.com',  // Issuer
-            'exp' => $expirationTimestamp,                       // Expiration time
-            'nbf' => time(),                                     // Not before time
-            'iat' => time(),                                     // Issued at time
-            'sub' => $urlPath,                                   // Subject (the URL path)
-            'kid' => $useKeyId                                   // Key ID used for verification
+            'iss' => 'origin-sign.infra.cerist.test',
+            'exp' => time() + $expirationTime,
+            'nbf' => time(),
+            'iat' => time(),
+            'sub' => $urlPath,
+            'cdnistt' => 1,
+            'cdniets' => 3600
         ];
-        
+
         // Add custom claims
         $claims = array_merge($claims, $customClaims);
-        
-        // Generate the JWT token
-        try {
-            $token = JWT::encode($claims, $signingKey, 'HS256', null, ['kid' => $useKeyId]);
-            
-            // Build the complete URL
-            // $baseUrl = isset($_ENV['CDN_BASE_URL']) ? $_ENV['CDN_BASE_URL'] : 'https://cdn.example.com';
-            $urlPath = ltrim($urlPath, '/'); // Remove leading slash if present
-            
-            // Add the JWT token as a query parameter
-            $separator = (strpos($urlPath, '?') !== false) ? '&' : '?';
-            $signedUrl = '/' . $urlPath . $separator . 'token=' . $token;
-            
-            return $signedUrl;
-        } catch (Exception $e) {
-            error_log('Error generating signed URL: ' . $e->getMessage());
-            return null;
-        }
+
+        // Create token
+        $algorithmManager = new \Jose\Component\Core\AlgorithmManager([
+            new HS256()
+        ]);
+        $jwsBuilder = new JWSBuilder($algorithmManager);
+        $jws = $jwsBuilder
+            ->create()
+            ->withPayload(json_encode($claims))
+            ->addSignature($jwk, ['alg' => 'HS256', 'kid' => $useKeyId, 'type' => 'JWT'])
+            ->build();
+
+        $serializer = new CompactSerializer();
+        $token = $serializer->serialize($jws);
+
+        // Build URL
+        $urlPath = ltrim($urlPath, '/');
+        $separator = (strpos($urlPath, '?') !== false) ? '&' : '?';
+        $timestamp = time();
+        $signedUrl = '/' . $urlPath . $separator . 't=' . $timestamp . '&URISigningPackage=' . $token;
+
+        return $signedUrl;
     }
-    
+
+    /**
+     * Helper method to Base64Url encode
+     */
+    private function base64UrlEncode($data)
+    {
+        return rtrim(strtr(base64_encode($data), '+/', '-_'), '=');
+    }
+
     /**
      * Verifies a signed URL token
      * 
@@ -211,36 +222,43 @@ class CDN
      */
     public function verifySignedUrlToken($token)
     {
-        if (empty($this->signKeys)) {
-            return false;
-        }
-        
         try {
-            // Extract the key ID from the token header
-            $tokenParts = explode('.', $token);
-            if (count($tokenParts) !== 3) {
-                return false;
-            }
-            
-            $header = json_decode(base64_decode(str_replace(['-', '_'], ['+', '/'], $tokenParts[0])), true);
-            
+            $serializer = new CompactSerializer();
+            $jws = $serializer->unserialize($token);
+
+            // Extract header
+            $header = $jws->getSignature(0)->getProtectedHeader();
+
             if (!isset($header['kid']) || !isset($this->signKeys[$header['kid']])) {
                 return false;
             }
-            
-            $keyId = $header['kid'];
-            $key = $this->signKeys[$keyId];
-            
-            // Decode and verify the token
-            $decoded = JWT::decode($token, new \Firebase\JWT\Key($key, 'HS256'));
-            
-            // Validate the expiration time
-            if (isset($decoded->exp) && $decoded->exp < time()) {
-                return false; // Token has expired
+
+            // Create JWK
+            $jwk = new JWK([
+                'kty' => 'oct',
+                'k' => base64_encode($this->signKeys[$header['kid']]),
+                'alg' => 'HS256',
+                'kid' => $header['kid']
+            ]);
+
+            // Verify signature
+            $algorithmManager = new \Jose\Component\Core\AlgorithmManager([new HS256()]);
+            $jwsVerifier = new JWSVerifier($algorithmManager);
+            $isVerified = $jwsVerifier->verifyWithKey($jws, $jwk, 0);
+
+            if (!$isVerified) {
+                return false;
             }
-            
-            // Convert to array
-            return (array) $decoded;
+
+            // Decode payload
+            $payload = json_decode($jws->getPayload(), true);
+
+            // Validate expiration
+            if (isset($payload['exp']) && $payload['exp'] < time()) {
+                return false;
+            }
+
+            return $payload;
         } catch (Exception $e) {
             error_log('Token verification failed: ' . $e->getMessage());
             return false;

@@ -71,7 +71,7 @@ class MediaController
      */
     public function serve($folder, $filename)
     {
-        $token = isset($_GET['token']) ? $_GET['token'] : null;
+        $token = isset($_GET['URISigningPackage']) ? $_GET['URISigningPackage'] : null;
         $t = isset($_GET['t']) ? $_GET['t'] : null;
         $filename = urldecode($filename);
         $filePath = $this->uploadsBaseDir . '/' . $folder . '/' . $filename;
@@ -133,17 +133,17 @@ class MediaController
             //  header('HTTP/1.1 403 Forbidden');
             //    echo "Token has expired";
             //    exit;
-           // }
-           $currentTime = date('Y-m-d H:i:s T'); // Formatted date with timezone
-           error_log("Current time: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" . $currentTime);
-           // Correct token expiration check
-           if (isset($tokenData['exp']) && time() > $tokenData['exp']) {
+            // }
+            $currentTime = date('Y-m-d H:i:s T'); // Formatted date with timezone
+            error_log("Current time: >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>" . $currentTime);
+            // Correct token expiration check
+            if (isset($tokenData['exp']) && time() > $tokenData['exp']) {
                 header('HTTP/1.1 403 Forbidden');
                 error_log("Token expired: current time " . time() . " > token expiration " . $tokenData['exp']);
                 echo "Token has expired";
                 exit;
-           }
-        }else {
+            }
+        } else {
             error_log(" >>>>>>>>>>>>>>>>>>>>>>>>>>  Token not provided, not serving file directly.");
             $this->send404('Unsupported file type');
             return;
@@ -165,16 +165,16 @@ class MediaController
             $cacheTime = $this->tokenCacheTimes[$folder] ?? 0;
 
             // Always set no-cache headers for token-protected content
-            header('Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
-            header('Pragma: no-cache');
-            header('Expires: 0');
+            //header('Cache-Control: no-store, no-cache, must-revalidate, proxy-revalidate, max-age=0');
+            //header('Pragma: no-cache');
+            //header('Expires: 0');
 
             // Add a Vary header to ensure proxy servers don't serve cached content across users
-            header('Vary: Authorization, Cookie');
+            //header('Vary: Authorization, Cookie');
 
             // Add cache-busting headers
-            header('Last-Modified: ' . gmdate('D, d M Y H:i:s', time()) . ' GMT');
-            header('ETag: "' . md5(time()) . '"');
+            //header('Last-Modified: ' . gmdate('D, d M Y H:i:s', time()) . ' GMT');
+            //header('ETag: "' . md5(time()) . '"');
         } else {
             // For public content, use normal cache times
             $cacheTime = $this->cacheTimes[$folder] ?? 20; // Default 20 seconds
@@ -252,10 +252,11 @@ class MediaController
 
                 // Add cache-busting query parameter to prevent browser caching for token-protected content
                 // This ensures the browser makes a new request when the token expires
-                $cacheBuster = '?t=' . time();
+                // TODO wec can test without cacheBuster
+                // $cacheBuster = '?t=' . time();
 
                 // Generate the signed URL with Apache Traffic Control CDN compatibility
-                $signedUrl = $this->cdn->generateSignedUrl($urlPath . $cacheBuster, $expirationTime, $allClaims);
+                $signedUrl = $this->cdn->generateSignedUrl($urlPath, $expirationTime, $allClaims);
 
                 // Add additional cache-busting parameters
                 $separator = (strpos($signedUrl, '?') !== false) ? '&' : '?';

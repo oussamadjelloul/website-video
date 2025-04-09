@@ -12,6 +12,7 @@
         }
     ],
     "require": {
-        "firebase/php-jwt": "^6.10"
+        "firebase/php-jwt": "^6.10",
+        "web-token/jwt-framework": "^4.0"
     }
 }
